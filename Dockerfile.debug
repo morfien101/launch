@@ -1,0 +1,8 @@
+FROM ubuntu:latest
+
+USER nobody
+
+ADD ./launch* /
+ADD ./testbin/testbin /testbin
+
+ENTRYPOINT [ "/launch" ]

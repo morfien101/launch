@@ -1,0 +1,8 @@
+/launch
+/testbin/testbin
+# Available publically and likely to fall out of date.
+# https://help.papertrailapp.com/kb/configuration/encrypting-remote-syslog-with-tls-ssl/
+papertrail_cert.crt
+
+# while I sort these out
+READMEs/

@@ -1,0 +1,10 @@
+FROM gcr.io/distroless/base
+
+ADD ./passwd /etc/passwd
+
+USER nobody
+
+ADD ./launch* /
+ADD ./testbin/testbin /testbin
+
+ENTRYPOINT [ "/launch" ]

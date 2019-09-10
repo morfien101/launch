@@ -1,0 +1,26 @@
+process_manager:
+  debug_logging: true
+  debug_options:
+    show_generated_config: true
+  logging_config:
+    engine: console
+processes:
+  main_processes:
+  - name: TestBin1
+    command: /testbin
+    arguments:
+      - -timeout
+      - 2
+      - -no-env
+      - -log-json
+      - 5
+default_logger_config:
+  logging_config:
+    engine: syslog
+    syslog:
+      program_name: example_service
+      address: logs.papertrailapp.com:12345
+      protocol: tcp+tls
+      override_hostname: toaster
+      detect_log_level: true
+      cert_bundle_path: papertrail_cert.crt
