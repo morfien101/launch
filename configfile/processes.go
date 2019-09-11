@@ -16,4 +16,5 @@ type Process struct {
 	LoggerConfig  LoggingConfig `yaml:"logging_config"`
 	CombindOutput bool          `yaml:"combine_output,omitempty"`
 	TermTimeout   int           `yaml:"termination_timeout_seconds,omitempty"`
+	StartDelay    int           `yaml:"start_delay_seconds,omitempty"`
 }

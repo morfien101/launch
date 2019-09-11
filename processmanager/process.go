@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/morfien101/launch/internallogger"
 
@@ -29,4 +30,11 @@ func (p *Process) running() bool {
 	p.RLock()
 	defer p.RUnlock()
 	return p.exiting
+}
+
+func (p *Process) processStartDelay() {
+	if p.config.StartDelay != 0 {
+		p.pmlogger.Debugf("Process start is configured for delayed start of %d seconds.\n", p.config.StartDelay)
+		time.Sleep(time.Second * time.Duration(p.config.StartDelay))
+	}
 }

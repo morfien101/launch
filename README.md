@@ -18,7 +18,7 @@ Launch is designed to be a process manager with simple but powerful logging. It 
 
 features still in the back burner:
 
-* [ ] delayed start on processes.
+* [x] delayed start on processes.
 * [ ] health check processes - not sure how to do this yet
 * [ ] restart failed main processes if configured
 * [ ] rendering of configuration file trigger after init processes. To allow for secrets or configuration to be collected.

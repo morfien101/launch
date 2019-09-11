@@ -163,7 +163,7 @@ func (pm *ProcessManger) RunInitProcesses() (string, error) {
 // RunMainProcesses will start the processes listed in sequential order.
 // Processes are expected to start and stay running. A failure of one
 // will cause all the ProcessManger to send termination signals to all
-// remaining and subsqently kill the processes manager.
+// remaining and subsequently kill the processes manager.
 func (pm *ProcessManger) RunMainProcesses() (chan string, error) {
 	// We need to wait for signals and repeat them into the processes
 	pm.pmlogger.Debugln("Starting signal catcher go func")
@@ -190,6 +190,7 @@ func (pm *ProcessManger) RunMainProcesses() (chan string, error) {
 		}
 		// Run the process
 		go func() {
+			proc.processStartDelay()
 			pm.pmlogger.Debugf("Starting %s.\n", proc.config.CMD)
 			endstate := proc.runProcess(mainProcess)
 			pm.EndList = append(pm.EndList, &endstate)
