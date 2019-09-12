@@ -22,7 +22,7 @@ features still in the back burner:
 * [ ] health check processes - not sure how to do this yet
 * [x] restart failed main processes if configured
 * [ ] rendering of configuration file trigger after init processes. To allow for secrets or configuration to be collected.
-* [ ] Send logs to multiple logging engines.
+* [x] Send logs to multiple logging engines.
 
 ## Logging
 

@@ -26,7 +26,7 @@ const (
 
 var (
 	// version and timestamp are expected to be passed in at build time.
-	buildVersion   = "0.2.0"
+	buildVersion   = "0.3.0"
 	buildTimestamp = ""
 
 	timeout = DefaultTimeout
@@ -74,7 +74,7 @@ The error was: %s`, err)
 		configfile.DefaultLoggerDetails{},
 	)
 	starterPMConfig := configfile.LoggingConfig{
-		Engine: "console",
+		Engine: []string{"console"},
 	}
 	err := loggers.StartLoggers(configfile.Processes{}, starterPMConfig)
 	if err != nil {
@@ -127,7 +127,7 @@ The error was: %s`, err)
 	pmlogger.Debugln("Waiting for main processes to finish.")
 	endMessage := <-wait
 	pmlogger.Debugln("Finished waiting. Proceeding to shutdown loggers.")
-	pmlogger.Println("Final state: " + endMessage)
+	pmlogger.Println(endMessage)
 
 	// Shutdown the loggers.
 	terminate(0, loggers)

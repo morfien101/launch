@@ -2,11 +2,17 @@ package configfile
 
 var (
 	defaultLoggingEngine = LoggingConfig{
-		Engine: "console",
+		Engine: []string{"console"},
 	}
 
 	defaultProcessManager = ProcessManager{
-		LoggerConfig: defaultLoggingEngine,
+		LoggerConfig: LoggingConfig{
+			Engine: []string{"console"},
+		},
+	}
+
+	defaultProcessManagerSyslog = Syslog{
+		ProgramName: "Launch",
 	}
 
 	defaultProcTimeout = 30

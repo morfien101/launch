@@ -3,7 +3,7 @@ process_manager:
   debug_options:
     show_generated_config: true
   logging_config:
-    engine: console
+    engine: [console, syslog]
 processes:
   init_processes:
   - name: Init_1
@@ -32,9 +32,8 @@ processes:
       - -no-env
 default_logger_config:
   logging_config:
-    engine: console
+    engine: [console, syslog]
     syslog:
-      program_name: example_service
       address: logs.papertrailapp.com:12345
       protocol: tcp+tls
       override_hostname: toaster

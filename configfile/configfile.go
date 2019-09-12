@@ -48,7 +48,7 @@ func (cf *Config) setDefaultLoggerConfig() {
 			Config: defaultLoggingEngine,
 		}
 	}
-	if cf.DefaultLoggerConfig.Config.Engine == "" {
+	if len(cf.DefaultLoggerConfig.Config.Engine) == 0 {
 		cf.DefaultLoggerConfig.Config.Engine = defaultLoggingEngine.Engine
 	}
 }
@@ -79,7 +79,7 @@ func (cf *Config) setDefaultProcessLogger() {
 			if proc.LoggerConfig.ProcessName == "" {
 				setName(proc)
 			}
-			if proc.LoggerConfig.Engine == "" {
+			if len(proc.LoggerConfig.Engine) == 0 {
 				setEngine(proc)
 			}
 		}
@@ -96,8 +96,21 @@ func (cf *Config) setDefaultProcessManager() {
 	if &cf.ProcessManager.LoggerConfig == nil {
 		cf.ProcessManager.LoggerConfig = defaultProcessManager.LoggerConfig
 	}
-	if cf.ProcessManager.LoggerConfig.Engine == "" {
+	if len(cf.ProcessManager.LoggerConfig.Engine) == 0 {
 		cf.ProcessManager.LoggerConfig.Engine = defaultProcessManager.LoggerConfig.Engine
+	}
+
+	// Set defaults for logging engines under process manager context
+	for _, engine := range cf.ProcessManager.LoggerConfig.Engine {
+		switch engine {
+		case "syslog":
+			if &cf.ProcessManager.LoggerConfig.Syslog == nil {
+				cf.ProcessManager.LoggerConfig.Syslog = defaultProcessManagerSyslog
+			}
+			if cf.ProcessManager.LoggerConfig.Syslog.ProgramName == "" {
+				cf.ProcessManager.LoggerConfig.Syslog.ProgramName = defaultProcessManagerSyslog.ProgramName
+			}
+		}
 	}
 }
 

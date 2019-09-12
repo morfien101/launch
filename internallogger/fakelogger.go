@@ -14,13 +14,13 @@ func NewFakeLogger() *InternalLogger {
 	cfg := configfile.Config{
 		ProcessManager: configfile.ProcessManager{
 			LoggerConfig: configfile.LoggingConfig{
-				Engine:      "console",
+				Engine:      []string{"console"},
 				ProcessName: "FakeInternalLogger",
 			},
 		},
 		DefaultLoggerConfig: configfile.DefaultLoggerDetails{
 			Config: configfile.LoggingConfig{
-				Engine: "console",
+				Engine: []string{"console"},
 			},
 		},
 	}

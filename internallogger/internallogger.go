@@ -22,7 +22,7 @@ type IntErrLogger interface {
 	Errorln(s interface{})
 }
 
-// IntStdLogger is a logger that will minic fmt.Printf or fmt.Println
+// IntStdLogger is a logger that will mimic fmt.Printf or fmt.Println
 type IntStdLogger interface {
 	Printf(format string, args ...interface{})
 	Println(s interface{})

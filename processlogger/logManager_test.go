@@ -48,7 +48,7 @@ func TestLogger(t *testing.T) {
 	proc1 := &configfile.Process{
 		Name: "Test1",
 		LoggerConfig: configfile.LoggingConfig{
-			Engine:      "tracer1",
+			Engine:      []string{"tracer1", "tracer2"},
 			ProcessName: "test1",
 		},
 	}
@@ -56,7 +56,7 @@ func TestLogger(t *testing.T) {
 	proc2 := &configfile.Process{
 		Name: "Test2",
 		LoggerConfig: configfile.LoggingConfig{
-			Engine:      "tracer2",
+			Engine:      []string{"tracer2"},
 			ProcessName: "test2",
 		},
 	}
@@ -64,7 +64,7 @@ func TestLogger(t *testing.T) {
 	conf := configfile.Config{
 		ProcessManager: configfile.ProcessManager{
 			LoggerConfig: configfile.LoggingConfig{
-				Engine:      "tracer1",
+				Engine:      []string{"tracer1"},
 				ProcessName: "test1",
 			},
 		},
@@ -107,7 +107,8 @@ func TestLogger(t *testing.T) {
 	// It can't be too much as we need to make sure its still fast enough
 	time.Sleep(time.Millisecond * 2)
 
-	if tracer1.logger.Len() != 1 {
+	// Tracer 1 will get 2 message as we send to more than 1 logging engine on a process
+	if tracer1.logger.Len() != 2 {
 		t.Logf("Tracer 1 does not have the correct number of messages. Want: %d, Got: %d", 1, tracer1.logger.Len())
 		t.Fail()
 	}
@@ -121,14 +122,14 @@ func TestUndefinedLogger(t *testing.T) {
 	proc1 := &configfile.Process{
 		Name: "Test1",
 		LoggerConfig: configfile.LoggingConfig{
-			Engine:      "tracer1",
+			Engine:      []string{"tracer1"},
 			ProcessName: "test1",
 		},
 	}
 	conf := configfile.Config{
 		ProcessManager: configfile.ProcessManager{
 			LoggerConfig: configfile.LoggingConfig{
-				Engine:      "Potato",
+				Engine:      []string{"Potato"},
 				ProcessName: "test1",
 			},
 		},

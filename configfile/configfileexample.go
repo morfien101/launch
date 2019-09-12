@@ -16,7 +16,7 @@ func ExampleConfigFile() (string, error) {
 			Args:          []string{"--arg1", "two"},
 			CombindOutput: false,
 			LoggerConfig: LoggingConfig{
-				Engine: "console",
+				Engine: []string{"console"},
 			},
 		},
 		{
@@ -39,7 +39,7 @@ func ExampleConfigFile() (string, error) {
 
 	exampleLoggerConfig := DefaultLoggerDetails{
 		Config: LoggingConfig{
-			Engine: "syslog",
+			Engine: []string{"syslog"},
 			Syslog: Syslog{
 				ProgramName: "example_service",
 				Address:     "logs.papertrail.com:16900",
@@ -49,7 +49,7 @@ func ExampleConfigFile() (string, error) {
 
 	exampleProcessManagerConfig := ProcessManager{
 		LoggerConfig: LoggingConfig{
-			Engine: "syslog",
+			Engine: []string{"syslog"},
 		},
 	}
 	exampleConfig := &Config{
