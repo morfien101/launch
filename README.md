@@ -20,8 +20,9 @@ features still in the back burner:
 
 * [x] delayed start on processes.
 * [ ] health check processes - not sure how to do this yet
-* [ ] restart failed main processes if configured
+* [x] restart failed main processes if configured
 * [ ] rendering of configuration file trigger after init processes. To allow for secrets or configuration to be collected.
+* [ ] Send logs to multiple logging engines.
 
 ## Logging
 
