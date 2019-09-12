@@ -17,4 +17,5 @@ type Process struct {
 	CombindOutput bool          `yaml:"combine_output,omitempty"`
 	TermTimeout   int           `yaml:"termination_timeout_seconds,omitempty"`
 	StartDelay    int           `yaml:"start_delay_seconds,omitempty"`
+	RestartCount  int           `yaml:"restart_count,omitempty"`
 }

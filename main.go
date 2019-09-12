@@ -26,7 +26,7 @@ const (
 
 var (
 	// version and timestamp are expected to be passed in at build time.
-	buildVersion   = "0.1.0"
+	buildVersion   = "0.2.0"
 	buildTimestamp = ""
 
 	timeout = DefaultTimeout

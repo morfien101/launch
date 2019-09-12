@@ -5,6 +5,13 @@ process_manager:
   logging_config:
     engine: console
 processes:
+  init_processes:
+  - name: Init_1
+    command: /testbin
+    arguments:
+      - -timeout
+      - 1
+      - -no-env
   main_processes:
   - name: TestBin1
     command: /testbin
@@ -14,9 +21,18 @@ processes:
       - -no-env
       - -log-json
       - 5
+      - -exit-with
+      - 1
+    restart_count: 2
+  - name: TestBin2
+    command: /testbin
+    arguments:
+      - -timeout
+      - 3
+      - -no-env
 default_logger_config:
   logging_config:
-    engine: syslog
+    engine: console
     syslog:
       program_name: example_service
       address: logs.papertrailapp.com:12345

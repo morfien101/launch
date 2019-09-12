@@ -28,7 +28,7 @@ var (
 	noNewLineFlag  = flag.Bool("no-newline", false, "Remove new line from stdout and stderr output.")
 	echoFlag       = flag.String("id", "", "Prints this on execution")
 	timeoutSeconds = flag.Int("timeout", 10, "How long to wait before dying in seconds.")
-	exitBad        = flag.Int("exit-bad", 0, "Exit with an exitcode of 1 to indicate a bad exit code.")
+	exitWith        = flag.Int("exit-with", 0, "Exit with the specified exitcode.")
 	ignoreSignals  = flag.Bool("ignore-signals", false, "Ignore the signals that the process gets.")
 	logjson        = flag.Int("log-json", 0, "Log some random json messages. The number says how many logs you want.")
 	helpflag       = flag.Bool("h", false, "Show the help menu")
@@ -111,10 +111,10 @@ func main() {
 
 	fmt.Println(<-done)
 
-	if *exitBad > 0 {
-		os.Stderr.WriteString(fmt.Sprintf("Exiting badly because of -bad-exit flag. Using exitcode %d", *exitBad))
-		os.Exit(*exitBad)
+	if *exitWith > 0 {
+		os.Stderr.WriteString(fmt.Sprintf("Exiting with special exit code %d.", *exitWith))
 	}
+	os.Exit(*exitWith)
 }
 
 func generateJSONLog() (string, error) {
