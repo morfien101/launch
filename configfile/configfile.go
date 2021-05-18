@@ -21,35 +21,40 @@ func New(filePath string) (*Config, error) {
 	// Digest the config file
 	fileBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("Could not read config file. Error: %s", err)
+		return nil, fmt.Errorf("could not read config file. Error: %s", err)
 	}
 
 	decodedYaml, err := templating.GenerateTemplate(fileBytes)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to decode template. Error: %s", err)
+		return nil, fmt.Errorf("failed to decode template. Error: %s", err)
 	}
-	newConfig := &Config{}
+	newConfig := blankConfig()
+
 	if err := yaml.Unmarshal(decodedYaml, newConfig); err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal yaml. Error: %s", err)
+		return nil, fmt.Errorf("failed to unmarshal yaml. Error: %s", err)
 	}
 
-	newConfig.setDefaultLoggerConfig()
 	newConfig.setDefaultProcessLogger()
 	newConfig.setDefaultProcessManager()
 	newConfig.setDefaultProcessTimeout()
+	newConfig.setDefaultSecretTimeout()
 
 	return newConfig, nil
 }
 
-// setDefaultLoggerConfig will setup a default logging config if one doesn't already exist.
-func (cf *Config) setDefaultLoggerConfig() {
-	if &cf.DefaultLoggerConfig == nil {
-		cf.DefaultLoggerConfig = DefaultLoggerDetails{
+func blankConfig() *Config {
+	return &Config{
+		DefaultLoggerConfig: DefaultLoggerDetails{
 			Config: defaultLoggingEngine,
-		}
+		},
 	}
-	if len(cf.DefaultLoggerConfig.Config.Engine) == 0 {
-		cf.DefaultLoggerConfig.Config.Engine = defaultLoggingEngine.Engine
+}
+
+func (cf *Config) setDefaultSecretTimeout() {
+	for _, secretConf := range cf.Processes.SecretProcess {
+		if secretConf.TermTimeout == 0 {
+			secretConf.TermTimeout = 60
+		}
 	}
 }
 
@@ -101,15 +106,12 @@ func (cf *Config) setDefaultProcessManager() {
 	}
 
 	// Set defaults for logging engines under process manager context
-	for _, engine := range cf.ProcessManager.LoggerConfig.Engine {
-		switch engine {
-		case "syslog":
-			if &cf.ProcessManager.LoggerConfig.Syslog == nil {
-				cf.ProcessManager.LoggerConfig.Syslog = defaultProcessManagerSyslog
-			}
-			if cf.ProcessManager.LoggerConfig.Syslog.ProgramName == "" {
-				cf.ProcessManager.LoggerConfig.Syslog.ProgramName = defaultProcessManagerSyslog.ProgramName
-			}
+	if cf.ProcessManager.LoggerConfig.Engine == "syslog" {
+		if &cf.ProcessManager.LoggerConfig.Syslog == nil {
+			cf.ProcessManager.LoggerConfig.Syslog = defaultProcessManagerSyslog
+		}
+		if cf.ProcessManager.LoggerConfig.Syslog.ProgramName == "" {
+			cf.ProcessManager.LoggerConfig.Syslog.ProgramName = defaultProcessManagerSyslog.ProgramName
 		}
 	}
 }

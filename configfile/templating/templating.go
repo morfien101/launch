@@ -21,6 +21,7 @@ var funcMap = template.FuncMap{
 	"env":      Env,
 	"default":  Default,
 	"required": Required,
+	"zerolen":  ZeroLen,
 }
 
 func (s OptionalString) String() string {
@@ -96,4 +97,37 @@ func GenerateTemplate(source []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to transform template. Error: %s", err)
 	}
 	return buffer.Bytes(), nil
+}
+
+// ZeroLen is used to test id a value passed in is of zero length. This is expected
+// to be a string or OptionalString. Used primarily to determine if a value exists.
+// Think of -z in Bash. The true or false value is returned depending on the outcome.
+func ZeroLen(arg, trueValue, falseValue interface{}) (interface{}, error) {
+	if arg == nil {
+		return trueValue, nil
+	}
+
+	var testString string
+
+	switch v := arg.(type) {
+	case string:
+		testString = v
+	case *string:
+		if v != nil {
+			testString = *v
+		} else {
+			return trueValue, nil
+		}
+	case OptionalString:
+		if v.ptr != nil {
+			testString = *v.ptr
+		}
+	default:
+		return falseValue, fmt.Errorf("Default: unsupported type '%T'", v)
+	}
+
+	if len(testString) == 0 {
+		return trueValue, nil
+	}
+	return falseValue, nil
 }

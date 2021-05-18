@@ -120,20 +120,18 @@ func (lm *LogManager) startLogRouter(id string, logger Logger) {
 }
 
 func (lm *LogManager) startLogger(conf configfile.LoggingConfig) error {
-	for _, logEngine := range conf.Engine {
-		if _, ok := lm.availableLoggers[logEngine]; !ok {
-			return fmt.Errorf("logging engine %s is not recognized. Please check your configuration file", logEngine)
-		}
+	if _, ok := lm.availableLoggers[conf.Engine]; !ok {
+		return fmt.Errorf("logging engine %s is not recognized. Please check your configuration file", conf.Engine)
+	}
 
-		// We register the configuration for the loggers here.
-		// We need to tell the loggers to start later.
-		err := lm.availableLoggers[logEngine].RegisterConfig(conf, lm.defaultConfig)
-		if err != nil {
-			return err
-		}
-		if lm.activeLoggers[logEngine] != lm.availableLoggers[logEngine] {
-			lm.activeLoggers[logEngine] = lm.availableLoggers[logEngine]
-		}
+	// We register the configuration for the loggers here.
+	// We need to tell the loggers to start later.
+	err := lm.availableLoggers[conf.Engine].RegisterConfig(conf, lm.defaultConfig)
+	if err != nil {
+		return err
+	}
+	if lm.activeLoggers[conf.Engine] != lm.availableLoggers[conf.Engine] {
+		lm.activeLoggers[conf.Engine] = lm.availableLoggers[conf.Engine]
 	}
 	return nil
 }
@@ -146,16 +144,14 @@ func (lm *LogManager) Submit(log LogMessage) {
 		// a log.
 		return
 	}
-	for _, logEngine := range log.Config.Engine {
-		select {
-		case lm.activeLoggerQ[logEngine] <- &log:
-			// We should also possibly log metrics for successful logs in queue
-		default:
-			// TODO
-			// We should be logging metrics here for each message that we have dropped.
-			errMsg := fmt.Errorf("Can't log to %s because it is overflowing with logs. Log is from: %s", logEngine, log.Source)
-			fmt.Println(errMsg)
-		}
+	select {
+	case lm.activeLoggerQ[log.Config.Engine] <- &log:
+		// We should also possibly log metrics for successful logs in queue
+	default:
+		// TODO
+		// We should be logging metrics here for each message that we have dropped.
+		errMsg := fmt.Errorf("can't log to %s because it is overflowing with logs. Log is from: %s", log.Config.Engine, log.Source)
+		fmt.Println(errMsg)
 	}
 }
 

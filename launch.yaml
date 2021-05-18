@@ -3,15 +3,21 @@ process_manager:
   debug_options:
     show_generated_config: true
   logging_config:
-    engine: [console, syslog]
+    engine: console
 processes:
+  secret_processes:
+  - name: Secret_1
+    command: /testbin
+    arguments:
+      - -send-env
+      - -timeout
+      - 1
   init_processes:
   - name: Init_1
     command: /testbin
     arguments:
       - -timeout
       - 1
-      - -no-env
   main_processes:
   - name: TestBin1
     command: /testbin
@@ -32,10 +38,4 @@ processes:
       - -no-env
 default_logger_config:
   logging_config:
-    engine: [console, syslog]
-    syslog:
-      address: logs.papertrailapp.com:12345
-      protocol: tcp+tls
-      override_hostname: toaster
-      detect_log_level: true
-      cert_bundle_path: papertrail_cert.crt
+    engine: console

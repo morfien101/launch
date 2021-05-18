@@ -3,7 +3,7 @@ package configfile
 // LoggingConfig is a struct that will hold the values of the logging
 // configuration of the process or process manager
 type LoggingConfig struct {
-	Engine      []string   `yaml:"engine,omitempty"`
+	Engine      string     `yaml:"engine,omitempty"`
 	ProcessName string     `yaml:"process_name,omitempty"`
 	Syslog      Syslog     `yaml:"syslog,omitempty"`
 	Logfile     FileLogger `yaml:"file_logger,omitempty"`

@@ -9,6 +9,16 @@ import (
 // ExampleConfigFile will return a string with an example yaml file.
 // All features should be in here to present to the user.
 func ExampleConfigFile() (string, error) {
+	exampleSecretProcesses := []*SecretProcess{
+		{
+			Name:        "Process1",
+			CMD:         "/example/bin1",
+			Args:        []string{"--arg1", "two"},
+			TermTimeout: 60,
+			Skip:        false,
+		},
+	}
+
 	exampleInitProcesses := []*Process{
 		{
 			Name:          "Process1",
@@ -16,7 +26,7 @@ func ExampleConfigFile() (string, error) {
 			Args:          []string{"--arg1", "two"},
 			CombindOutput: false,
 			LoggerConfig: LoggingConfig{
-				Engine: []string{"console"},
+				Engine: "console",
 			},
 		},
 		{
@@ -39,7 +49,7 @@ func ExampleConfigFile() (string, error) {
 
 	exampleLoggerConfig := DefaultLoggerDetails{
 		Config: LoggingConfig{
-			Engine: []string{"syslog"},
+			Engine: "syslog",
 			Syslog: Syslog{
 				ProgramName: "example_service",
 				Address:     "logs.papertrail.com:16900",
@@ -49,12 +59,13 @@ func ExampleConfigFile() (string, error) {
 
 	exampleProcessManagerConfig := ProcessManager{
 		LoggerConfig: LoggingConfig{
-			Engine: []string{"syslog"},
+			Engine: "syslog",
 		},
 	}
 	exampleConfig := &Config{
 		ProcessManager: exampleProcessManagerConfig,
 		Processes: Processes{
+			SecretProcess: exampleSecretProcesses,
 			InitProcesses: exampleInitProcesses,
 			MainProcesses: exampleMainProcesses,
 		},
@@ -63,7 +74,7 @@ func ExampleConfigFile() (string, error) {
 
 	out, err := yaml.Marshal(exampleConfig)
 	if err != nil {
-		return "", fmt.Errorf("Creating example failed. Error: %s", err)
+		return "", fmt.Errorf("creating example failed. Error: %s", err)
 	}
 
 	return string(out), nil

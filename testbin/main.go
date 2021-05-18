@@ -28,15 +28,18 @@ var (
 	noNewLineFlag  = flag.Bool("no-newline", false, "Remove new line from stdout and stderr output.")
 	echoFlag       = flag.String("id", "", "Prints this on execution")
 	timeoutSeconds = flag.Int("timeout", 10, "How long to wait before dying in seconds.")
-	exitWith        = flag.Int("exit-with", 0, "Exit with the specified exitcode.")
+	exitWith       = flag.Int("exit-with", 0, "Exit with the specified exitcode.")
 	ignoreSignals  = flag.Bool("ignore-signals", false, "Ignore the signals that the process gets.")
 	logjson        = flag.Int("log-json", 0, "Log some random json messages. The number says how many logs you want.")
-	helpflag       = flag.Bool("h", false, "Show the help menu")
-	versionflag    = flag.Bool("v", false, "Displays a version number.")
+
+	addTestEnv = flag.Bool("send-env", false, "returns a test environment variable: 'LUANCH_TEST=LIFTOFF'")
+
+	helpflag    = flag.Bool("h", false, "Show the help menu")
+	versionflag = flag.Bool("v", false, "Displays a version number.")
 )
 
 func main() {
-	flag.Parse() 
+	flag.Parse()
 	if *helpflag {
 		flag.PrintDefaults()
 		os.Exit(0)
@@ -45,6 +48,15 @@ func main() {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
+
+	// We check to see if we need to add an environment variable for secrets.
+	// If so we need to do this and exit with no output to stdout.
+	if *addTestEnv {
+		fmt.Println(`{"LUANCH_TEST":"LIFTOFF"}`)
+		time.Sleep(time.Second * time.Duration(*timeoutSeconds))
+		os.Exit(0)
+	}
+
 	// Start
 	log.Printf("Starting %s version %s", os.Args[0], VERSION)
 

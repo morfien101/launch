@@ -14,6 +14,13 @@ import (
 	"github.com/morfien101/launch/configfile"
 	"github.com/morfien101/launch/internallogger"
 	"github.com/morfien101/launch/processlogger"
+	"github.com/morfien101/launch/signalreplicator"
+)
+
+const (
+	initProcess   = "init"
+	mainProcess   = "main"
+	secretProcess = "secret"
 )
 
 // ProcessManger holds the config and state of the running processes.
@@ -21,14 +28,18 @@ type ProcessManger struct {
 	config        configfile.Processes
 	logger        *processlogger.LogManager
 	pmlogger      internallogger.IntLogger
-	Signals       chan os.Signal
 	mainProcesses []*Process
+	EndList       []*processEnd
 	wg            sync.WaitGroup
 	tumble        chan bool
 	shuttingDown  bool
+}
 
-	mu         sync.Mutex
-	ExitStates []*processExitState
+type processEnd struct {
+	Name        string `json:"name"`
+	ProcessType string `json:"type"`
+	Error       error  `json:"runtime_error,omitempty"`
+	ExitCode    int    `json:"exit_code"`
 }
 
 // New will create a ProcessManager with the supplied config and return it
@@ -36,63 +47,40 @@ func New(
 	config configfile.Processes,
 	logManager *processlogger.LogManager,
 	pmlogger internallogger.IntLogger,
-	signalChan chan os.Signal,
 ) *ProcessManger {
 	pm := &ProcessManger{
 		config:   config,
 		logger:   logManager,
 		pmlogger: pmlogger,
-		Signals:  signalChan,
 		tumble:   make(chan bool, 1),
 	}
 
 	// Once we get a single process fail we shutdown everything.
 	// A SIGTERM is sent to the master signal channel
-	pmlogger.Debugln("Starting terminator go func for when signals arrive")
 	go pm.terminator()
 
 	return pm
 }
 
-func (pm *ProcessManger) addExitState(pe *processExitState) {
-	pm.mu.Lock()
-	defer pm.mu.Unlock()
-	pm.ExitStates = append(pm.ExitStates, pe)
-}
-
-func (pm *ProcessManger) signalRecplicator() {
-	for {
-		select {
-		case signalIn := <-pm.Signals:
-			f := func(procs []*Process) {
-				for _, proc := range procs {
-					if proc.running() {
-						proc.sigChan <- signalIn
-					}
-				}
-			}
-			f(pm.mainProcesses)
-
-		}
-	}
-}
-
+// terminator is used when we need to terminate the processes in the Main processes stack.
+// This is normally because either it has errored and failed or it has finished.
 func (pm *ProcessManger) terminator() {
-	for {
-		select {
-		case _ = <-pm.tumble:
-			// If the process manager is already shutting down we will get a few
-			// signals from the processes as they turn off. We can safely discard
-			// them since we expect them.
-			if pm.shuttingDown {
-				continue
-			}
-			// If we are not in shutdown mode trigger it. Them mark it as shutting down.
-			pm.shuttingDown = true
-			// We only need to send signals to propagate if we have started some mains.
-			if pm.mainProcesses != nil {
-				pm.Signals <- syscall.SIGTERM
-			}
+	pm.pmlogger.Debugf("Starting termination watcher\n")
+	for range pm.tumble {
+		pm.pmlogger.Debugf("Starting the tumble of stacks\n")
+		// If the process manager is already shutting down we will get a few
+		// signals from the processes as the stack starts breaking down.
+		// We can safely discard them since we expect them.
+		if pm.shuttingDown {
+			pm.pmlogger.Debugf("Already in shutdown process skipping signal replication\n")
+			continue
+		}
+		// If we are not in shutdown mode trigger it. Them mark it as shutting down.
+		pm.shuttingDown = true
+		// We only need to send signals to propagate if we have started some mains.
+		if pm.mainProcesses != nil {
+			signalreplicator.Send(syscall.SIGTERM)
+			pm.pmlogger.Debugf("Sending %s signal to replicator\n", syscall.SIGTERM)
 		}
 	}
 }
@@ -106,49 +94,40 @@ func (pm *ProcessManger) RunInitProcesses() (string, error) {
 	pm.pmlogger.Println("Starting Init Processes")
 	// Start the main processes
 	for _, procConfig := range pm.config.InitProcesses {
-		// Create a process object
-		proc := newProcess(procConfig, pm.pmlogger)
-		pm.pmlogger.Debugf("Attempting to run %s.\n", proc.config.CMD)
-		// setup logging hooks
-		// If this fails we can't carry on.
-		err := pm.setupProcess(proc)
-		if err != nil {
-			return "", err
+		if err := pm.runInitProc(procConfig); err != nil {
+			return pm.exitStatusFormatter(), err
 		}
-		signalReplicatorFuncChan := make(chan struct{}, 1)
-		destroySignalReplicator := func() {
-			signalReplicatorFuncChan <- struct{}{}
-		}
-		go func() {
-			for {
-				select {
-				case sig := <-pm.Signals:
-					proc.sigChan <- sig
-				case <-signalReplicatorFuncChan:
-					return
-				}
-			}
-		}()
-
-		// Run the process
-		endstate, ok := proc.runProcess(initProcess)
-		pm.pmlogger.Debugf("Finished running %s.\n", proc.config.CMD)
-		pm.addExitState(&endstate)
-		if !ok {
-			pm.pmlogger.Debugln("The last init command failed. Stack will now tumble.")
-			pm.tumble <- true
-
-			err := fmt.Errorf("Process %s failed. Error reported: %s", procConfig.Name, endstate.Error)
-			output := make(chan string, 1)
-			pm.exitStatusPrinter(output)
-
-			destroySignalReplicator()
-
-			return <-output, err
-		}
-		destroySignalReplicator()
 	}
 	return "", nil
+}
+
+func (pm *ProcessManger) runInitProc(procConfig *configfile.Process) error {
+	// Create a process object
+	proc := &Process{
+		config:   procConfig,
+		pmlogger: pm.pmlogger,
+		sigChan:  make(chan os.Signal, 1),
+	}
+	pm.pmlogger.Debugf("Attempting to run %s.\n", proc.config.CMD)
+	// setup logging hooks
+	// If this fails we can't carry on.
+	err := pm.setupProcess(proc)
+	if err != nil {
+		return err
+	}
+
+	// Run the process
+	endstate := proc.runProcess(initProcess)
+	signalreplicator.Remove(proc.sigChan)
+	pm.pmlogger.Debugf("Finished running %s.\n", proc.config.CMD)
+	pm.EndList = append(pm.EndList, endstate)
+	if endstate.Error != nil {
+		pm.pmlogger.Debugln("The last init command failed. Stack will now tumble.")
+		pm.tumble <- true
+
+		return fmt.Errorf("Process %s failed. Error reported: %s", procConfig.Name, endstate.Error)
+	}
+	return nil
 }
 
 // RunMainProcesses will start the processes listed in sequential order.
@@ -158,7 +137,6 @@ func (pm *ProcessManger) RunInitProcesses() (string, error) {
 func (pm *ProcessManger) RunMainProcesses() (chan string, error) {
 	// We need to wait for signals and repeat them into the processes
 	pm.pmlogger.Debugln("Starting signal catcher go func")
-	go pm.signalRecplicator()
 
 	pm.pmlogger.Println("Starting Main Processes")
 	// Start the main processes
@@ -166,9 +144,13 @@ func (pm *ProcessManger) RunMainProcesses() (chan string, error) {
 		// Create a process object
 		pm.wg.Add(1)
 		pm.pmlogger.Debugf("Adding %s to the list of main processes.\n", procConfig.CMD)
-		proc := newProcess(procConfig, pm.pmlogger)
+		proc := &Process{
+			config:   procConfig,
+			pmlogger: pm.pmlogger,
+			sigChan:  make(chan os.Signal, 1),
+			shutdown: make(chan bool, 1),
+		}
 		pm.mainProcesses = append(pm.mainProcesses, proc)
-
 		// setup logging hooks
 		// If this fails we can't carry on.
 		err := pm.setupProcess(proc)
@@ -177,42 +159,11 @@ func (pm *ProcessManger) RunMainProcesses() (chan string, error) {
 		}
 		// Run the process
 		go func() {
-			// Start Delay is only processed at the beinging of Launches life cycle.
-			proc.processStartDelay()
-
-			runProc := func() bool {
-				pm.pmlogger.Debugf("Starting %s.\n", proc.config.CMD)
-				endstate, ok := proc.runProcess(mainProcess)
-				pm.addExitState(&endstate)
-				pm.pmlogger.Debugf("%s has terminated.\n", proc.config.CMD)
-				return ok
-			}
-
-			firstRun := true
-			for {
-				if firstRun {
-					firstRun = false
-					runProc()
-					continue
-				}
-				if proc.restartAllowed() {
-					ok := runProc()
-					// setup logging hooks
-					// If this fails we can't carry on.
-					// We can't throw the error here, but we can log it.
-					err := pm.setupProcess(proc)
-					if err != nil {
-						pm.pmlogger.Errorf("Failed to link process pipes for %s. Error: %s", proc.config.Name, err)
-						break
-					}
-					if !ok {
-						proc.addRestart()
-					}
-					continue
-				}
-				break
-			}
-
+			pm.pmlogger.Debugf("Starting %s.\n", proc.config.CMD)
+			endstate := proc.runProcess(mainProcess)
+			signalreplicator.Remove(proc.sigChan)
+			pm.EndList = append(pm.EndList, endstate)
+			pm.pmlogger.Debugf("%s has terminated.\n", proc.config.CMD)
 			pm.tumble <- true
 			pm.wg.Done()
 		}()
@@ -226,38 +177,61 @@ func (pm *ProcessManger) RunMainProcesses() (chan string, error) {
 
 func (pm *ProcessManger) waitMain(output chan string) {
 	pm.pmlogger.Debugln("Starting wait on waitgroup for main processes.")
+	// Wait until all the waitgroups have closed off.
+	// This means all the processes have stopped.
 	pm.wg.Wait()
 	pm.pmlogger.Debugln("passed waitgroup for main processes.")
-	pm.exitStatusPrinter(output)
+	// Write to the queue and close it to signal this is complete.
+	output <- pm.exitStatusFormatter()
+	close(output)
 }
 
-func (pm *ProcessManger) exitStatusPrinter(output chan string) {
-	b, err := json.Marshal(pm.ExitStates)
+func (pm *ProcessManger) exitStatusFormatter() string {
+	b, err := json.Marshal(pm.EndList)
 	if err != nil {
 		pm.pmlogger.Debugf("Error generating end state. Error: %s\n", err)
 	}
-	output <- string(b)
+	return string(b)
 }
 
 // Setup Process will link create the process object and also link the stdout and stderr.
 // An error is returned if anything fails.
 func (pm *ProcessManger) setupProcess(proc *Process) error {
-	proc.reset()
-	proc.proc = exec.Command(proc.config.CMD, proc.config.Args...)
-
-	procStdOut, err := proc.proc.StdoutPipe()
+	execProc, stdout, stderr, err := createRunableProcess(proc.config.CMD, proc.config.Args, proc.sigChan)
 	if err != nil {
-		return fmt.Errorf("Failed to connect to stdout pipe. Error: %s", err)
+		return err
 	}
-
-	procStdErr, err := proc.proc.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("Failed to connect to stderr pipe. Error: %s", err)
-	}
-
+	proc.proc = execProc
+	procStdOut := stdout
+	procStdErr := stderr
 	proc.closePipesChan = pm.redirectOutput(procStdOut, procStdErr, proc.config.LoggerConfig)
 
 	return nil
+}
+
+// createRunableProcess will create a process that can be run later. It will also make sure that the
+// output pipes have been linked.
+// We can use this in processes managed by the process manager or secret processes which are just
+// single processes.
+func createRunableProcess(
+	command string,
+	arguments []string,
+	signalChan chan os.Signal,
+) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
+	signalreplicator.Register(signalChan)
+	execProc := exec.Command(command, arguments...)
+
+	stdout, err := execProc.StdoutPipe()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to connect to stdout pipe. Error: %s", err)
+	}
+
+	stderr, err := execProc.StderrPipe()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to connect to stderr pipe. Error: %s", err)
+	}
+
+	return execProc, stdout, stderr, nil
 }
 
 // redirectOutput will take the pipes of the process and redirect it to the logger for the process

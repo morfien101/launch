@@ -2,12 +2,12 @@ package configfile
 
 var (
 	defaultLoggingEngine = LoggingConfig{
-		Engine: []string{"console"},
+		Engine: "console",
 	}
 
 	defaultProcessManager = ProcessManager{
 		LoggerConfig: LoggingConfig{
-			Engine: []string{"console"},
+			Engine: "console",
 		},
 	}
 
