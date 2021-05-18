@@ -24,7 +24,7 @@ import (
 
 var (
 	// version and timestamp are expected to be passed in at build time.
-	buildVersion   = "0.3.0"
+	buildVersion   = "0.4.0"
 	buildTimestamp = ""
 )
 
