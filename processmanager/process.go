@@ -41,7 +41,7 @@ func (p *Process) running() bool {
 
 func (p *Process) processStartDelay() {
 	if p.config.StartDelay != 0 {
-		p.pmlogger.Debugf("Process start is configured for delayed start of %d seconds.\n", p.config.StartDelay)
+		p.pmlogger.Printf("Process start is configured for delayed start of %d seconds.\n", p.config.StartDelay)
 		time.Sleep(time.Second * time.Duration(p.config.StartDelay))
 	}
 }
@@ -54,6 +54,8 @@ func (p *Process) runProcess(processType string) *processEnd {
 		ProcessType: processType,
 		ExitCode:    -1,
 	}
+
+	p.processStartDelay()
 
 	if err := p.proc.Start(); err != nil {
 		p.exitcode = 1
