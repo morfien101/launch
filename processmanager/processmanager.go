@@ -197,7 +197,7 @@ func (pm *ProcessManger) exitStatusFormatter() string {
 // Setup Process will link create the process object and also link the stdout and stderr.
 // An error is returned if anything fails.
 func (pm *ProcessManger) setupProcess(proc *Process) error {
-	execProc, stdout, stderr, err := createRunableProcess(proc.config.CMD, proc.config.Args, proc.sigChan)
+	execProc, stdout, stderr, err := createRunableProcess(proc.config, proc.sigChan)
 	if err != nil {
 		return err
 	}
@@ -214,12 +214,16 @@ func (pm *ProcessManger) setupProcess(proc *Process) error {
 // We can use this in processes managed by the process manager or secret processes which are just
 // single processes.
 func createRunableProcess(
-	command string,
-	arguments []string,
+	config *configfile.Process,
 	signalChan chan os.Signal,
 ) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	signalreplicator.Register(signalChan)
-	execProc := exec.Command(command, arguments...)
+	execProc := exec.Command(config.CMD, config.Args...)
+
+	// If we have a working dir. Set it here.
+	if config.WorkingDirectory != "" {
+		execProc.Dir = config.WorkingDirectory
+	}
 
 	stdout, err := execProc.StdoutPipe()
 	if err != nil {

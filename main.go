@@ -63,14 +63,6 @@ The error was: %s`, err)
 	// Setup signal capture
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	go func() {
-		for receivedSignal := range signals {
-			// Signals can come from inside and outside. The signals can come from the user/deamon running the container
-			// or it can come from a process termination. In either case we need to send the signals to the replicator
-			// to forward it onto the running processes.
-			signalreplicator.Send(receivedSignal)
-		}
-	}()
 
 	// Create a limited logger that will be thrown away once we fired up our actual loggers.
 	loggers := processlogger.New(
@@ -91,6 +83,17 @@ The error was: %s`, err)
 		pmlogger.Errorf("Failed to render the configuration. Error: %s", err)
 		terminate(1, loggers)
 	}
+
+	// At this point we can start to handle signals.
+	go func() {
+		for receivedSignal := range signals {
+			// Signals can come from inside and outside. The signals can come from the user/deamon running the container
+			// or it can come from a process termination. In either case we need to send the signals to the replicator
+			// to forward it onto the running processes.
+			pmlogger.Printf("Got signal '%s'\n", receivedSignal)
+			signalreplicator.Send(receivedSignal)
+		}
+	}()
 
 	// Collect secrets
 	// This can only use the temp logger because we can't yet start the

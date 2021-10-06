@@ -7,12 +7,12 @@ Take a look around.
 
 ### Configuration files
 
-[Configuration Documentation](ConfigurationFile.md)
+[Configuration Documentation](./ConfigurationFile.md)
 
 ### Logging
 
-[Logging Documentation](Logging.md)
+[Logging Documentation](./Logging.md)
 
 ### Secrets
 
-[Secrets Documentation](Secrets.md)
+[Secrets Documentation](./Secrets.md)

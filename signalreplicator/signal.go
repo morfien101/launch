@@ -30,7 +30,6 @@ func Remove(ch chan os.Signal) {
 
 // Send will take a signal that needs to be replicated
 func Send(s os.Signal) {
-	fmt.Println("got signal", s)
 	globalReplicator.input <- s
 }
 

@@ -77,6 +77,8 @@ processes:
     # skip stops this execution if required.
     # Use the template functions to set this value.
     skip: false
+    # Run the process using this dir as the base directory.
+    working_dir: /some/dir
   # init_processes start after secrets and run sequentially
   # This is a list and can have as many items as required.
   init_processes:
@@ -95,6 +97,8 @@ processes:
     # termination_timeout_seconds how long the grace period is for processes to terminate.
     # The default is 1 second.
     termination_timeout_seconds: 3
+    # Run the process using this dir as the base directory.
+    working_dir: /some/dir
     # logging_config is used to forward on the logs from this process.
     logging_config:
       # This section contains a Logging config _see below_
@@ -116,6 +120,10 @@ processes:
     - 1
     - -b
     - foo and bar
+    # Run the process using this dir as the base directory.
+    working_dir: /some/dir
+    # Delay the start of a process for x number of seconds.
+    start_delay_seconds: 60
     logging_config:
       # This section contains a Logging config _see below_
 ```

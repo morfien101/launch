@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 # Use "./build_and_test.sh" to run only the tests
 # Use "./build_and_test.sh gobuild" to also rebuild the go project
 

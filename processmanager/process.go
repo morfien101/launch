@@ -50,7 +50,7 @@ func (p *Process) processStartDelay() {
 // has exited either good or bad.
 func (p *Process) runProcess(processType string) *processEnd {
 	finalState := &processEnd{
-		Name:        p.config.CMD,
+		Name:        p.config.Name,
 		ProcessType: processType,
 		ExitCode:    -1,
 	}
