@@ -2,15 +2,15 @@
 package processmanager
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 
+	"github.com/morfien101/launch/bytepipe"
 	"github.com/morfien101/launch/configfile"
 	"github.com/morfien101/launch/internallogger"
 	"github.com/morfien101/launch/processlogger"
@@ -202,9 +202,7 @@ func (pm *ProcessManger) setupProcess(proc *Process) error {
 		return err
 	}
 	proc.proc = execProc
-	procStdOut := stdout
-	procStdErr := stderr
-	proc.closePipesChan = pm.redirectOutput(procStdOut, procStdErr, proc.config.LoggerConfig)
+	proc.closePipesChan = pm.redirectOutput(stdout, stderr, proc.config.LoggerConfig)
 
 	return nil
 }
@@ -216,7 +214,7 @@ func (pm *ProcessManger) setupProcess(proc *Process) error {
 func createRunableProcess(
 	config *configfile.Process,
 	signalChan chan os.Signal,
-) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
+) (*exec.Cmd, *bytepipe.BytePipe, *bytepipe.BytePipe, error) {
 	signalreplicator.Register(signalChan)
 	execProc := exec.Command(config.CMD, config.Args...)
 
@@ -225,30 +223,23 @@ func createRunableProcess(
 		execProc.Dir = config.WorkingDirectory
 	}
 
-	stdout, err := execProc.StdoutPipe()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to connect to stdout pipe. Error: %s", err)
-	}
+	stdout := bytepipe.New()
+	stderr := bytepipe.New()
 
-	stderr, err := execProc.StderrPipe()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to connect to stderr pipe. Error: %s", err)
-	}
+	execProc.Stdout = stdout
+	execProc.Stderr = stderr
 
 	return execProc, stdout, stderr, nil
 }
 
 // redirectOutput will take the pipes of the process and redirect it to the logger for the process
-func (pm *ProcessManger) redirectOutput(stdout, stderr io.ReadCloser, config configfile.LoggingConfig) chan bool {
-	closePipetrigger := make(chan bool, 1)
+func (pm *ProcessManger) redirectOutput(stdout, stderr *bytepipe.BytePipe, config configfile.LoggingConfig) chan bool {
+	closePipeTrigger := make(chan bool, 1)
 	go func() {
-		<-closePipetrigger
-		defer stdout.Close()
-		defer stderr.Close()
+		<-closePipeTrigger
+		stdout.Close()
+		stderr.Close()
 	}()
-
-	stdOutScanner := bufio.NewScanner(stdout)
-	stdErrScanner := bufio.NewScanner(stderr)
 
 	newLog := func(from processlogger.Pipe, msg string) processlogger.LogMessage {
 		return processlogger.LogMessage{
@@ -260,15 +251,24 @@ func (pm *ProcessManger) redirectOutput(stdout, stderr io.ReadCloser, config con
 	}
 
 	go func() {
-		for stdOutScanner.Scan() {
-			pm.logger.Submit(newLog(processlogger.STDOUT, stdOutScanner.Text()+"\n"))
-		}
-	}()
-	go func() {
-		for stdErrScanner.Scan() {
-			pm.logger.Submit(newLog(processlogger.STDOUT, stdErrScanner.Text()+"\n"))
+		for stdoutData := range stdout.Ready {
+			for _, s := range strings.Split(stdoutData, "\n") {
+				if len(s) != 0 {
+					pm.logger.Submit(newLog(processlogger.STDOUT, s+"\n"))
+				}
+			}
 		}
 	}()
 
-	return closePipetrigger
+	go func() {
+		for stderrData := range stderr.Ready {
+			for _, s := range strings.Split(stderrData, "\n") {
+				if len(s) != 0 {
+					pm.logger.Submit(newLog(processlogger.STDERR, stderrData))
+				}
+			}
+		}
+	}()
+
+	return closePipeTrigger
 }

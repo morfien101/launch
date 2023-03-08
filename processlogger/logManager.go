@@ -24,7 +24,7 @@ const (
 	STDOUT = Pipe("o")
 	// logBufferSize is how many logs can be in queue for each logging end point before we
 	// start dropping messages
-	logBufferSize = 100
+	logBufferSize = 10
 )
 
 // LogMessage is the box that needs to be created to ship a message to a
@@ -140,19 +140,9 @@ func (lm *LogManager) startLogger(conf configfile.LoggingConfig) error {
 // If the queue is full we will drop the message.
 func (lm *LogManager) Submit(log LogMessage) {
 	if lm.terminated {
-		// We should send a metric or something here to show that we ditched
-		// a log.
 		return
 	}
-	select {
-	case lm.activeLoggerQ[log.Config.Engine] <- &log:
-		// We should also possibly log metrics for successful logs in queue
-	default:
-		// TODO
-		// We should be logging metrics here for each message that we have dropped.
-		errMsg := fmt.Errorf("can't log to %s because it is overflowing with logs. Log is from: %s", log.Config.Engine, log.Source)
-		fmt.Println(errMsg)
-	}
+	lm.activeLoggerQ[log.Config.Engine] <- &log
 }
 
 // Shutdown is used to gracefully shutdown all the loggers and log routers.
