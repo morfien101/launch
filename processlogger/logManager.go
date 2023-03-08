@@ -1,5 +1,5 @@
 // Package processlogger is responsible for collecting logs that are submitted and
-// forwarding them to the correct logging engine. The logging engines need to satisfiy
+// forwarding them to the correct logging engine. The logging engines need to satisfy
 // the Logger interface.
 // Loggers handle themselves and processlogger forwards on the log messages that they
 // need to send.
