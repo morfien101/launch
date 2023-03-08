@@ -249,7 +249,7 @@ func (pm *ProcessManger) redirectOutput(stdout, stderr *bytepipe.BytePipe, confi
 			Message: msg,
 		}
 	}
-
+	pm.wg.Add(1)
 	go func() {
 		for stdoutData := range stdout.Ready {
 			for _, s := range strings.Split(stdoutData, "\n") {
@@ -258,8 +258,9 @@ func (pm *ProcessManger) redirectOutput(stdout, stderr *bytepipe.BytePipe, confi
 				}
 			}
 		}
+		pm.wg.Done()
 	}()
-
+	pm.wg.Add(1)
 	go func() {
 		for stderrData := range stderr.Ready {
 			for _, s := range strings.Split(stderrData, "\n") {
@@ -268,6 +269,7 @@ func (pm *ProcessManger) redirectOutput(stdout, stderr *bytepipe.BytePipe, confi
 				}
 			}
 		}
+		pm.wg.Done()
 	}()
 
 	return closePipeTrigger
