@@ -24,7 +24,6 @@ type Process struct {
 	exitcode       int
 	shutdown       chan bool
 	sigChan        chan os.Signal
-	loggerTag      string
 	proc           *exec.Cmd
 	closePipesChan chan bool
 }
@@ -76,6 +75,7 @@ func (p *Process) runProcess(processType string) *processEnd {
 	// Wait for signals
 	go func() {
 		exitTimeout := make(chan bool, 1)
+	loop0:
 		for {
 			select {
 			case signal := <-p.sigChan:
@@ -115,7 +115,7 @@ func (p *Process) runProcess(processType string) *processEnd {
 						timeoutError = fmt.Errorf("failed to terminate %s", p.config.CMD)
 					}
 				}
-				break
+				break loop0
 			}
 		}
 	}()
