@@ -19,25 +19,29 @@ processes:
       - -timeout
       - 1
   main_processes:
-  # - name: TestBin1
-  #   command: /testbin
-  #   arguments:
-  #     - -timeout
-  #     - 2
-  #     - -no-env
-  #     - -log-json
-  #     - 5
-  #     - -exit-with
-  #     - 1
-  #   restart_count: 2
-  - name: TestBin2
+  - name: TestBin1
     command: /testbin
     arguments:
+      - -timeout
+      - 2
       - -no-env
+      - -log-json
+      - 5
+      - -exit-with
+      - 1
       - -spam
       - -stdout
       - -spam-size
       - 20
+    restart_count: 2
+  # - name: TestBin2
+  #   command: /testbin
+  #   arguments:
+  #     - -no-env
+  #     - -spam
+  #     - -stdout
+  #     - -spam-size
+  #     - 100000
 default_logger_config:
   logging_config:
     engine: console
