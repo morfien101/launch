@@ -1,4 +1,3 @@
-# Bug fix and Github work flows
+# Adding in more supported CPU architectures
 
-Fixed a bug where processes set to have a start delay did not delay.
-Adding in Github work flow.
+This can now be used on arm64 chips. This enables use on apple silicon and other arm64 chips.
