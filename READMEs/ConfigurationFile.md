@@ -11,16 +11,16 @@ An example of the configuration file can be obtained by running:
 ./launch -example-config
 ```
 
-Below is each section of the configuration with the relevant values and details. If you would like more information regarding the configuration all data is layed out in the [configfile folder](../configfile).
+Below is each section of the configuration with the relevant values and details. If you would like more information regarding the configuration all data is laid out in the [configfile folder](../configfile).
 
 ## Understanding double rendering
 
 Configuration files have templating built in, see later templating section. This allows for environment variables to be used in the configuration file.
 However many of those environment variables will be collected during the secrets and parameters collection phase.
 
-The configuration file is rendered twice when the Launch is started.
-The first render will be done on start up, it will produce the configuration with the available environment variables as the container starts.
-The Launch will then proceed to collect secrets and parameters. Once complete the configuration is rendered a second time.
+The configuration file is rendered twice when Launch starts.
+The first render runs on startup and produces the configuration with the environment variables available at that point.
+Launch then proceeds to collect secrets and parameters. Once complete, the configuration is rendered a second time.
 This allows the configuration to make use of parameters and secrets as part of the configuration. Previously blanked environment settings will now be filled in.
 
 An example use case is using an override for hostname in the syslog logging configuration, or setting a environment variable.
@@ -32,7 +32,7 @@ Secrets are only collected once at startup.
 
 ## process_manager
 
-`process_manager` configures the Launch process itself. It needs to know where to send it's logs and also if it needs to enable debug logging.
+`process_manager` configures Launch itself. It needs to know where to send its logs and whether to enable debug logging.
 
 Example:
 
@@ -54,7 +54,7 @@ process_manager:
 
 ## processes
 
-`processes` tells the Launch what start and where to send the logs. There is 3 sections here: secret_processes, init_processes and main_processes
+`processes` tells Launch what to start and where to send the logs. There are 3 sections: `secret_processes`, `init_processes`, and `main_processes`.
 
 Example:
 
@@ -142,7 +142,7 @@ default_logger_config:
 ```
 ## Logging
 
-Logging is used to tell the Launch to send logs to a logging engine eg. syslog, console, etc...
+Logging is used to tell Launch where to send logs — e.g. syslog, console, etc.
 
 Below is the logging configuration. However this is a slightly different one to the rest.
 
