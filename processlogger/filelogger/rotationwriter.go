@@ -33,6 +33,7 @@ func newRW(conf configfile.FileLogger) (*rotateWriter, error) {
 	if err != nil {
 		return nil, err
 	}
+	go w.watchDog()
 	return w, nil
 }
 
@@ -54,7 +55,7 @@ func (w *rotateWriter) watchDog() {
 			if !ok {
 				err := w.rotate()
 				if err != nil {
-					w.panic(err)
+					w.logError(err)
 				}
 				w.deleteOldFiles()
 			}
@@ -62,12 +63,9 @@ func (w *rotateWriter) watchDog() {
 	}
 }
 
-// Loggers should not terminate service.
-// Should we need to panic we should handle the situation as best we can
-// Trying to keep service running.
-func (w *rotateWriter) panic(err error) {
-	// we have an err that we need to recover from
-	// The best we can do here is print it to the console
+// logError prints errors that cannot be propagated without terminating the logger.
+// The best we can do is surface them to the console and keep running.
+func (w *rotateWriter) logError(err error) {
 	fmt.Println(err)
 }
 
@@ -90,7 +88,7 @@ func (w *rotateWriter) deleteOldFiles() {
 		}
 		err := os.Remove(filename)
 		if err != nil {
-			w.panic(err)
+			w.logError(err)
 		}
 	}
 	w.historicalFilePaths = keep
@@ -133,9 +131,10 @@ func (w *rotateWriter) rotate() error {
 		newFileName := w.config.Filename + "." + time.Now().Format(time.RFC3339)
 		err = os.Rename(w.config.Filename, newFileName)
 		if err != nil {
-			return err
+			w.logError(err) // log and fall through to create a fresh file
+		} else {
+			w.updateHistoricalFileNames(newFileName)
 		}
-		w.updateHistoricalFileNames(newFileName)
 	}
 
 	// Create a file.

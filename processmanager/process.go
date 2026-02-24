@@ -31,11 +31,7 @@ type Process struct {
 func (p *Process) running() bool {
 	p.RLock()
 	defer p.RUnlock()
-	if p.exited {
-		return p.exited
-	}
-
-	return p.exiting
+	return !p.exited
 }
 
 func (p *Process) processStartDelay() {
@@ -136,7 +132,9 @@ func (p *Process) runProcess(processType string) *processEnd {
 		finalState.Error = timeoutError
 	}
 
+	p.Lock()
 	p.exited = true
+	p.Unlock()
 
 	finalState.ExitCode = readExitError(finalState.Error)
 	return finalState
@@ -179,7 +177,9 @@ func RunSecretProcess(secretConfig configfile.SecretProcess, logger internallogg
 	if err != nil {
 		stdout := []byte{}
 		if exitCode := readExitError(err); exitCode != 0 {
-			stdout = err.(*exec.ExitError).Stderr
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				stdout = exitErr.Stderr
+			}
 		}
 		return "", string(stdout), err
 	}

@@ -24,8 +24,6 @@ type FileLogManager struct {
 	filetracker map[string]*rotateWriter
 }
 
-var fileLogManager *FileLogManager
-
 func init() {
 	processlogger.RegisterLogger(LoggerTag, func() processlogger.Logger {
 		return &FileLogManager{filetracker: make(map[string]*rotateWriter)}

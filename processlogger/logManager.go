@@ -142,7 +142,9 @@ func (lm *LogManager) Submit(log LogMessage) {
 	if lm.terminated {
 		return
 	}
-	lm.activeLoggerQ[log.Config.Engine] <- &log
+	if q, ok := lm.activeLoggerQ[log.Config.Engine]; ok {
+		q <- &log
+	}
 }
 
 // Shutdown is used to gracefully shutdown all the loggers and log routers.

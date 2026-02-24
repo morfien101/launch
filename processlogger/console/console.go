@@ -55,10 +55,13 @@ func (c *Console) Shutdown() chan error {
 func (c *Console) Submit(msg processlogger.LogMessage) {
 	m := fmt.Sprintf("%s: %s", msg.Source, msg.Message)
 	if msg.Pipe == processlogger.STDERR {
-		c.stdErr(m)
+		// Error intentionally ignored: if stderr is unavailable there is nowhere
+		// meaningful to report the failure — logging it would use the same broken pipe.
+		c.stdErr(m) //nolint:errcheck
 	}
 	if msg.Pipe == processlogger.STDOUT {
-		c.stdOut(m)
+		// Error intentionally ignored: same reasoning as stderr above.
+		c.stdOut(m) //nolint:errcheck
 	}
 }
 
