@@ -219,7 +219,7 @@ func terminate(exitcode int, loggers *processlogger.LogManager) {
 			}
 			return strings.Join(es, ",")
 		}
-		log.Fatalf("Error shutting down loggers. Errors: %s" + errString())
+		log.Fatalf("Error shutting down loggers. Errors: %s", errString())
 	}
 
 	os.Exit(exitcode)

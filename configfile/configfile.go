@@ -66,9 +66,6 @@ func (cf *Config) setDefaultSecretTimeout() {
 // NOTE: setDefaultLoggerConfig should be called first
 //
 func (cf *Config) setDefaultProcessLogger() {
-	createLoggingConfig := func(proc *Process) {
-		proc.LoggerConfig = LoggingConfig{}
-	}
 	setName := func(proc *Process) {
 		proc.LoggerConfig.ProcessName = proc.Name
 	}
@@ -77,10 +74,6 @@ func (cf *Config) setDefaultProcessLogger() {
 	}
 	f := func(procList []*Process) {
 		for _, proc := range procList {
-			if &proc.LoggerConfig == nil {
-				// Create a logging config
-				createLoggingConfig(proc)
-			}
 			if proc.LoggerConfig.ProcessName == "" {
 				setName(proc)
 			}
@@ -95,21 +88,12 @@ func (cf *Config) setDefaultProcessLogger() {
 }
 
 func (cf *Config) setDefaultProcessManager() {
-	if &cf.ProcessManager == nil {
-		cf.ProcessManager = defaultProcessManager
-	}
-	if &cf.ProcessManager.LoggerConfig == nil {
-		cf.ProcessManager.LoggerConfig = defaultProcessManager.LoggerConfig
-	}
 	if len(cf.ProcessManager.LoggerConfig.Engine) == 0 {
 		cf.ProcessManager.LoggerConfig.Engine = defaultProcessManager.LoggerConfig.Engine
 	}
 
 	// Set defaults for logging engines under process manager context
 	if cf.ProcessManager.LoggerConfig.Engine == "syslog" {
-		if &cf.ProcessManager.LoggerConfig.Syslog == nil {
-			cf.ProcessManager.LoggerConfig.Syslog = defaultProcessManagerSyslog
-		}
 		if cf.ProcessManager.LoggerConfig.Syslog.ProgramName == "" {
 			cf.ProcessManager.LoggerConfig.Syslog.ProgramName = defaultProcessManagerSyslog.ProgramName
 		}

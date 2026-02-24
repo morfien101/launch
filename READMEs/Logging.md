@@ -4,13 +4,13 @@ A more detailed description of the loggers that are available is documented belo
 
 ## Startup logging
 
-The Launch needs to start logging before it is actually capable of logging fully. This is because some loggers require authentication that is expected to be collected by the secrets.
-To overcome this the Launch will log to the console until after the secrets have been collected.
+Launch needs to start logging before it is fully configured to do so. This is because some loggers require credentials that are expected to be collected by the secrets phase.
+To overcome this, Launch logs to the console until after secrets have been collected.
 At which point it will read the configuration file and use the specified loggers.
 
 ## Default logging
 
-Default values for logging can be set. These values will be used if there is not value present for a process or they will be merged. This allows most the configuration to be setup here, and only specifics to be set at the process level.
+Default values for logging can be set. These values are used when no value is present for a process, or they are merged with per-process values. This allows most of the configuration to be set here, with only the specifics overridden at the process level.
 
 Processes will still need to select a logging engine.
 
@@ -32,11 +32,11 @@ File logging is only really useful in development environments. In most producti
 
 ## Syslog
 
-Syslog is a pretty standard linux way of sending logs. These logs are sent as lines and multiline logs are unfortunetly split.
+Syslog is a standard Linux way of sending logs. Messages are sent line-by-line; multiline logs are unfortunately split across multiple entries.
 
-The logger allows you to override the name that you see in syslog. By default it will use the process name. If you set the `program_name` key under the syslog logging configuration it will use that in its place.
+The logger allows you to override the name that you see in syslog. By default it uses the process name. If you set the `program_name` key under the syslog logging configuration, that value is used instead.
 
-Due to the logs being presented to Launch via stdout we are not able to know if the log is critical, warning or informational. This information might be available in the text, however the Launch will simply forward on the message with out inspecting its contents by default.
+Because logs are presented to Launch via stdout, it cannot determine whether a log line is critical, a warning, or informational. By default, Launch forwards the message without inspecting its contents.
 
 If you set `extract_log_level: true` the logger will attempt to detect the level from your message. There are limitations here and your messages need to be structured correctly.
 
@@ -70,6 +70,6 @@ You can combine this with the configuration file templating to make names that r
 
 The normal rules for host names will apply. No special chars, no space, etc...
 
-For easier tracking of the instances themselves you can append the containers hostname to either the process or to the hostname. If you do this you need to include any _ or - as it will simple tack on the hostname.
-The can be set at the default configuration OR the process configuration.
+For easier tracking you can append the container hostname to either the process tag or the syslog hostname. If you do this you need to include any `_` or `-` separator yourself, as Launch will simply append the hostname directly.
+This can be set at the default configuration level or the process configuration level.
 Use `append_container_name_to_tag` and `append_container_name_to_hostname` to control these features.

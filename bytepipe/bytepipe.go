@@ -13,12 +13,15 @@ func New() *BytePipe {
 }
 
 func (bp *BytePipe) Write(p []byte) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
 	if p[len(p)-1] != '\n' {
 		p = append(p, '\n')
 	}
 
 	bp.Ready <- string(p)
-	return len(p), err
+	return len(p), nil
 }
 
 func (bp *BytePipe) Close() {

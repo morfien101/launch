@@ -1,0 +1,175 @@
+# Launch — LLM Quick Reference
+
+## What is Launch?
+
+Launch is a Go binary that runs as PID 1 in a Docker container. It manages multiple child processes, collects secrets, handles ordered init tasks, routes per-process logs to configurable engines, and propagates OS signals to all children. When any main process exits for any reason, Launch sends SIGTERM to all remaining main processes and waits for them to stop, then exits itself.
+
+---
+
+## Startup sequence
+
+1. Config file is read and rendered (Go template syntax; container env vars are available).
+2. Secret processes run sequentially — each must exit 0. Stdout is parsed as JSON and injected as environment variables.
+3. Config file is re-rendered (secret env vars are now available for use in config).
+4. Init processes run sequentially — any non-zero exit aborts startup.
+5. Main processes start in parallel.
+6. Launch waits. The first main process to exit triggers SIGTERM to all others.
+
+---
+
+## Configuration file
+
+YAML format. Generate an annotated example:
+
+```bash
+./launch -example-config
+```
+
+### Top-level keys
+
+```yaml
+process_manager:        # Launch's own logging and debug settings
+processes:              # All processes to run
+default_logger_config:  # Default logging values shared across all processes
+```
+
+### process_manager
+
+```yaml
+process_manager:
+  logging_config:
+    engine: console           # Where Launch sends its own log output
+    process_name: launch
+  debug_logging: false        # Enable verbose debug output
+  debug_options:
+    show_generated_config: false  # Print final config after second render
+```
+
+### processes
+
+```yaml
+processes:
+  secret_processes:
+  - name: fetch-secrets
+    command: /usr/local/bin/fetch-secrets
+    arguments:
+    - --region
+    - us-east-1
+    termination_timeout_seconds: 60
+    skip: false                         # Can use template: {{ zerolen (env "SKIP_SECRETS") "true" "false" }}
+    working_dir: /app
+
+  init_processes:
+  - name: run-migrations
+    command: /app/migrate
+    arguments:
+    - --up
+    termination_timeout_seconds: 30
+    working_dir: /app
+    logging_config:
+      engine: console
+      process_name: migrations
+
+  main_processes:
+  - name: web-server
+    command: /app/server
+    arguments:
+    - --port
+    - "8080"
+    termination_timeout_seconds: 30
+    start_delay_seconds: 0
+    working_dir: /app
+    logging_config:
+      engine: syslog
+      process_name: web-server
+      syslog:
+        program_name: web-server
+        override_hostname: my-app
+```
+
+### logging_config (used inside any process or process_manager)
+
+```yaml
+logging_config:
+  engine: console             # console | devnull | syslog | logfile
+  process_name: my-process    # Label attached to log lines
+
+  # Required only when engine: syslog
+  syslog:
+    program_name: my-process
+    extract_log_level: false          # Parse JSON logs and extract "level" field
+    override_hostname: ""             # Override container hostname in syslog
+    append_container_name_to_tag: false
+    append_container_name_to_hostname: false
+
+  # Required only when engine: logfile
+  file_config:
+    filepath: /var/log/my-process.log
+    size_limit: 100mb
+    historical_files_limit: 3
+```
+
+### default_logger_config
+
+```yaml
+default_logger_config:
+  logging_config:
+    engine: syslog
+    syslog:
+      override_hostname: my-app
+```
+
+Values here are used as defaults and merged with per-process config. Per-process values take precedence.
+
+---
+
+## Template functions
+
+The config file uses Go template syntax. Available functions:
+
+| Function  | Description                                       | Example                                              |
+|-----------|---------------------------------------------------|------------------------------------------------------|
+| `env`     | Read an environment variable                      | `{{ env "MY_VAR" }}`                                 |
+| `default` | Fallback value if the input is empty              | `{{ default (env "OPT_VAR") "fallback" }}`           |
+| `required`| Fail startup if the value is empty                | `{{ required (env "MUST_EXIST") }}`                  |
+| `zerolen` | Branch on whether a string is zero-length         | `{{ zerolen (env "FLAG") "true" "false" }}`          |
+
+The config file is rendered **twice**: once at container startup, and once after secrets are collected. This lets you reference secret-injected env vars inside your logging or process configuration.
+
+---
+
+## Logging engines
+
+| Engine    | Description                                                          |
+|-----------|----------------------------------------------------------------------|
+| `console` | Forwards stdout/stderr to Launch's own stdout/stderr. Good for dev.  |
+| `devnull` | Discards all log output.                                             |
+| `syslog`  | Ships log lines to a syslog daemon (local or remote, e.g. Papertrail). Multiline logs are split. |
+| `logfile` | Writes to a size-limited, rotating log file on disk.                 |
+
+---
+
+## Secret processes — rules
+
+- Run before init and main processes, sequentially.
+- Must exit 0 to allow startup to continue.
+- If they produce stdout, it must be a single JSON object: `{"KEY": "value", "KEY2": "value2"}`.
+  Those keys are injected as environment variables for all subsequent processes.
+- If the process writes to files instead, produce no stdout.
+- Use `skip: true` (or a template expression) to conditionally disable a secret process.
+
+---
+
+## Signal handling
+
+Launch forwards SIGTERM, SIGINT, and SIGKILL to all child processes. If a child does not exit within `termination_timeout_seconds` after receiving the signal, Launch sends SIGKILL to it. The default timeout is 30 seconds if not configured.
+
+---
+
+## Key behaviours to know
+
+- **Double render**: config is templated twice — before and after secrets — so secret values can be referenced in logging config.
+- **Init fail-fast**: a failing init process stops the entire container immediately.
+- **Main process cascade**: when any main process exits, all others receive SIGTERM. This prevents containers where a critical process dies silently.
+- **Per-process logging**: each process can use a different logging engine and configuration.
+- **Secret processes run before logging starts**: credentials needed by loggers are available by the time main logging is configured.

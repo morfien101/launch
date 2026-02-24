@@ -1,53 +1,68 @@
 # Launch
 
-A simple runtime-agnostic process manager that eases Docker services startup and logging.
-Consider it a half way house between Kubernetes and Docker.
+A lightweight process manager designed to run as PID 1 in Docker containers.
 
-Launch is expected to be process 1 in a container. It allows you to watch other processes in your containers and when they are all finished it will finish allowing containers to stop correctly.
+Launch lets you run multiple processes in a single container with centralized logging, ordered startup hooks, and graceful signal propagation.
 
-## What can Launch help with
+## Features
 
-Launch is designed to be a process manager with simple but powerful logging. It borrows some ideas from kubernetes without having to deploy a kubernetes stack.
+- Run **multiple processes** in one container.
+- **Secret collection** runs first and injects output as environment variables for all later processes.
+- **Init processes** run sequentially after secrets — any failure aborts startup.
+- **Main processes** run in parallel; if one exits, Launch sends SIGTERM to all remaining ones and waits for shutdown.
+- Ship logs to **console, file, syslog, or /dev/null** independently per process.
+- **Templated YAML config** — inject environment variables and use built-in helper functions.
 
-* You can run multiple processes in a single container.
-* You can ship logs from processes to different logging engines.
-* You can run init processes that run before your main processes. This allows you to collect artifacts, secrets or just setup an environment.
-* A single main process dying will bring down a container, gracefully shutting down the other applications.
+## How it works
 
-## Configuration
-
-More details can be found in the [README Folder](./READMEs/)
+```
+Startup sequence:
+  1. Read and render config file (first pass — container env vars available)
+  2. Run secret processes → capture stdout JSON and inject as env vars
+  3. Re-render config file (second pass — secret env vars now available)
+  4. Run init processes sequentially — any non-zero exit aborts startup
+  5. Start main processes in parallel
+  6. Wait — when any main process exits, send SIGTERM to all others and shut down
+```
 
 ## Processes
 
-Launch has 3 processes types when running.
+Launch supports three types of processes, each with a distinct role.
 
 ### Secret processes
 
-These are used to collect secret data like username and passwords at startup.
+Run before anything else. They collect credentials or other secrets and expose them as environment variables. Because full logging is not yet available at this stage, output goes to the console.
 
 ### Init processes
 
-These are used to configure the state of the container or collect more resources that don't need to be exported to environment variables.
+Run sequentially after secrets. Use these for setup tasks — running migrations, fetching config, preparing the filesystem. All init processes must succeed before main processes start.
 
-### Main Processes
+### Main processes
 
-These are the long running processes in your containers.
+The long-running processes in your container. They start in parallel and are expected to run for the lifetime of the container. If any one of them exits, Launch sends SIGTERM to all the others.
 
 ## Configuration
 
-The configuration YAML file is the driving force behind Launch. The configuration file will tell Launch what processes to run with what arguments, where to send logs.
+The configuration is driven by a YAML file. Run the following to generate an annotated example:
 
-The configuration file has a templating feature that allows you to make the configuration dynamic.
+```bash
+./launch -example-config
+```
 
-The configuration file has many sections that are documented in the
-[README dedicated to configuration](./READMEs/ConfigurationFile.MD).
+Full documentation:
+
+- [Configuration reference](./READMEs/ConfigurationFile.md) — all sections and options
+- [Logging engines](./READMEs/Logging.md) — console, file, syslog, `/dev/null`
+- [Secrets](./READMEs/Secrets.md) — how secret collection works
 
 ## Contributing
 
-This project is still very much in active development. Expect changes and improvements.
+This project is still in active development. There is a simple build script for integration testing.
 
-There is a simple build script that does the current integration testing.
+```bash
+# Run tests only
+./build_and_test.sh
 
-Use `./build_and_test.sh` to run only the tests
-Use `./build_and_test.sh` gobuild" to also rebuild the go project
+# Rebuild the binary and run tests
+./build_and_test.sh gobuild
+```

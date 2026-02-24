@@ -265,7 +265,7 @@ func (pm *ProcessManger) redirectOutput(stdout, stderr *bytepipe.BytePipe, confi
 		for stderrData := range stderr.Ready {
 			for _, s := range strings.Split(stderrData, "\n") {
 				if len(s) != 0 {
-					pm.logger.Submit(newLog(processlogger.STDERR, stderrData))
+					pm.logger.Submit(newLog(processlogger.STDERR, s+"\n"))
 				}
 			}
 		}

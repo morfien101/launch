@@ -33,7 +33,7 @@ var (
 	ignoreSignalsFlag  = flag.Bool("ignore-signals", false, "Ignore the signals that the process gets.")
 	logJSONFlag        = flag.Int("log-json", 0, "Log some random json messages. The number says how many logs you want.")
 
-	addTestEnv = flag.Bool("send-env", false, "returns a test environment variable: 'LUANCH_TEST=LIFTOFF'")
+	addTestEnv = flag.Bool("send-env", false, "returns a test environment variable: 'LAUNCH_TEST=LIFTOFF'")
 
 	helpFlag    = flag.Bool("h", false, "Show the help menu")
 	versionFlag = flag.Bool("v", false, "Displays a version number.")
