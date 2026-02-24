@@ -66,8 +66,13 @@ func (r *replicator) remove(ch chan os.Signal) {
 
 func (r *replicator) listen() {
 	for s := range r.input {
+		r.RLock()
 		for _, procChan := range r.signalChannels {
-			procChan <- s
+			select {
+			case procChan <- s:
+			default:
+			}
 		}
+		r.RUnlock()
 	}
 }

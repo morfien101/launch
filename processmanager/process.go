@@ -71,6 +71,7 @@ func (p *Process) runProcess(processType string) *processEnd {
 		p.closePipesChan <- true
 	}()
 	var timeoutError error = nil
+	var timerOnce sync.Once
 
 	// Wait for signals
 	go func() {
@@ -104,8 +105,10 @@ func (p *Process) runProcess(processType string) *processEnd {
 						p.config.TermTimeout = 30
 					}
 
-					time.AfterFunc(time.Duration(p.config.TermTimeout)*time.Second, func() {
-						exitTimeout <- p.running()
+					timerOnce.Do(func() {
+						time.AfterFunc(time.Duration(p.config.TermTimeout)*time.Second, func() {
+							exitTimeout <- p.running()
+						})
 					})
 				}
 			case timeout := <-exitTimeout:

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/morfien101/launch/configfile"
+	"github.com/morfien101/launch/processlogger"
 )
 
 func TestDeleteOldFiles(t *testing.T) {
@@ -70,5 +72,60 @@ logline3
 		if err == nil {
 			errCheck(err)
 		}
+	}
+}
+
+// TestRotateWriterClose guards against regression of the infinite recursion bug
+// where Close() called itself instead of w.fp.Close().
+func TestRotateWriterClose(t *testing.T) {
+	dir, err := ioutil.TempDir("", "rw_close_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	config := configfile.FileLogger{
+		Filename:        filepath.Join(dir, "test.log"),
+		SizeLimit:       1024 * 1024,
+		HistoricalFiles: 1,
+	}
+	rw, err := newRW(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := rw.Close(); err != nil {
+		t.Fatalf("Close() returned an error: %v", err)
+	}
+}
+
+// TestFileLogManagerRegisterAndSubmit guards against regression of the nil map
+// panic where FileLogManager was constructed without initialising filetracker.
+func TestFileLogManagerRegisterAndSubmit(t *testing.T) {
+	dir, err := ioutil.TempDir("", "flm_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	logConf := configfile.LoggingConfig{
+		Logfile: configfile.FileLogger{
+			Filename:        filepath.Join(dir, "test.log"),
+			SizeLimit:       1024 * 1024,
+			HistoricalFiles: 1,
+		},
+	}
+
+	flm := &FileLogManager{filetracker: make(map[string]*rotateWriter)}
+	if err := flm.RegisterConfig(logConf, configfile.DefaultLoggerDetails{}); err != nil {
+		t.Fatalf("RegisterConfig() returned an error: %v", err)
+	}
+
+	flm.Submit(processlogger.LogMessage{
+		Config:  logConf,
+		Message: "regression test message\n",
+	})
+
+	if err := <-flm.Shutdown(); err != nil {
+		t.Fatalf("Shutdown() returned an error: %v", err)
 	}
 }

@@ -111,7 +111,7 @@ func (w *rotateWriter) Close() error {
 	defer w.lock.Unlock()
 	close(w.watchDogSignals)
 	w.running = false
-	return w.Close()
+	return w.fp.Close()
 }
 
 // Rotate Perform the actual act of rotating and reopening file.
